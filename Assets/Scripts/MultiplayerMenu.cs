@@ -76,24 +76,12 @@ public class MultiplayerMenu : MonoBehaviour
     // Must be 'async' because joining takes time
     public async void StartClient()
     {
-        // --- JOIN CODE VALIDATION CHECK ---
-        // Prevent Relay from throwing ArgumentNullException if the box is empty or unassigned
-        if (joinCodeInput == null || string.IsNullOrWhiteSpace(joinCodeInput.text))
-        {
-            statusText.text = "Please enter a Join Code first!";
-            Debug.LogWarning("Cannot join: Join Code input field is empty.");
-            return;
-        }
-
-        // Clean up leading/trailing spaces typed into the Input Field
-        string cleanJoinCode = joinCodeInput.text.Trim();
-
         try
         {
             statusText.text = "Joining Session...";
 
-            // 1. Pass sanitized code to Relay to join allocation
-            JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(cleanJoinCode);
+            // 1. Get the text the Client typed and ask Relay to join that allocation
+            JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCodeInput.text);
 
             // 2. Grab the network transport component
             UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
@@ -114,11 +102,6 @@ public class MultiplayerMenu : MonoBehaviour
         {
             Debug.LogError(e);
             statusText.text = "Invalid Join Code.";
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError(e);
-            statusText.text = "Connection Error: Check code and try again.";
         }
     }
 }
