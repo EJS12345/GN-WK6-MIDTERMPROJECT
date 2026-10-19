@@ -8,10 +8,12 @@ public class PlayerMovement : NetworkBehaviour
 
     [Header("Jump Settings")]
     public float jumpForce = 7f;
-    public float groundCheckDistance = 1.1f;
-    public LayerMask groundLayer;
+    public float groundCheckDistance = 1.1f; // Distance from player center down to floor
+    public LayerMask groundLayer;           // Select the layer assigned to floor/obstacle blocks
 
     private Rigidbody rb;
+    private Vector2 currentInput;
+    private bool isGrounded;
 
     void Start()
     {
@@ -24,41 +26,66 @@ public class PlayerMovement : NetworkBehaviour
 
     void Update()
     {
-        // 1. Only gather key input on the client instance that OWNS this character
+        // 1. Only gather inputs on the client instance that OWNS this player
         if (!IsOwner) return;
 
+        // Reads both WASD and Arrow Keys automatically
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
         Vector2 inputVector = new Vector2(moveX, moveZ).normalized;
 
-        // Check if grounded on the local client for responsive jump checks
-        bool isGrounded = Physics.Raycast(transform.position, Vector3.down, groundCheckDistance, groundLayer);
-        bool jumpRequested = Input.GetButtonDown("Jump") && isGrounded;
+        // Send input to the server only when directional state changes (prevents network RPC flooding)
+        if (inputVector != currentInput)
+        {
+            currentInput = inputVector;
+            UpdateInputServerRpc(inputVector);
+        }
 
-        // 2. Pass movement commands to the Server so physics run on the host authority
-        MoveServerRpc(inputVector, jumpRequested);
+        // Check grounded status locally for immediate jump responsiveness
+        isGrounded = Physics.Raycast(transform.position, Vector3.down, groundCheckDistance, groundLayer);
+
+        // 2. Jump Input: Triggers on Spacebar OR Right Shift
+        if ((Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.RightShift)) && isGrounded)
+        {
+            JumpServerRpc();
+        }
     }
 
-    // ServerRpc executes exclusively on the Host/Server machine
-    [ServerRpc]
-    private void MoveServerRpc(Vector2 input, bool jump)
+    void FixedUpdate()
     {
-        if (rb == null) return;
+        // 3. Physics movement executes exclusively on the Server authority
+        if (!IsServer || rb == null || rb.isKinematic) return;
 
-        // Calculate and apply target velocity on the Server
-        Vector3 moveDirection = new Vector3(input.x, 0f, input.y);
+        Vector3 moveDirection = new Vector3(currentInput.x, 0f, currentInput.y);
         Vector3 targetVelocity = moveDirection * moveSpeed;
 
+        // Preserve gravity (Y-axis velocity) while applying horizontal movement
         rb.linearVelocity = new Vector3(targetVelocity.x, rb.linearVelocity.y, targetVelocity.z);
+    }
 
-        // Apply instant jump impulse on the Server
-        if (jump)
+    // Sends movement direction to the server
+    [ServerRpc]
+    private void UpdateInputServerRpc(Vector2 input)
+    {
+        currentInput = input;
+    }
+
+    // Sends jump action to the server
+    [ServerRpc]
+    private void JumpServerRpc()
+    {
+        if (rb == null || rb.isKinematic) return;
+
+        // Double check ground state on server before executing jump impulse
+        bool serverGrounded = Physics.Raycast(transform.position, Vector3.down, groundCheckDistance, groundLayer);
+        if (serverGrounded)
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
         }
     }
 
+    // Visualizes ground check distance in Scene view
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;

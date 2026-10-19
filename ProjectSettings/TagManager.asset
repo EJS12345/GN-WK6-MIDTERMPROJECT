@@ -6,6 +6,8 @@ TagManager:
   tags:
   - SpawnPoint
   - Ground
+  - Checkpoint
+  - KillZone
   layers:
   - Default
   - TransparentFX
