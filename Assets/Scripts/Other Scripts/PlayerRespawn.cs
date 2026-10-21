@@ -1,5 +1,5 @@
 using UnityEngine;
-using Unity.Netcode; // Required for multiplayer authority
+using Unity.Netcode;
 
 public class PlayerRespawn : NetworkBehaviour
 {
@@ -10,48 +10,44 @@ public class PlayerRespawn : NetworkBehaviour
     {
         rb = GetComponent<Rigidbody>();
 
-        // When the player spawns in, set their initial starting position as the first checkpoint
+        // 1. CRITICAL FIX: The Server must track the positions, not the Owner.
         if (IsServer)
         {
             currentRespawnPosition = transform.position;
         }
     }
 
-    // Handles touching invisible trigger boxes (like a giant fall zone under the map)
     private void OnTriggerEnter(Collider other)
     {
-        if (!IsServer) return; // Only the server is allowed to teleport players
+        // 2. CRITICAL FIX: Only the Server is allowed to detect traps and teleport bodies
+        if (!IsServer) return;
         HandleTouch(other.gameObject);
     }
 
-    // Handles touching solid objects (like solid platform floors or solid trap walls)
     private void OnCollisionEnter(Collision collision)
     {
+        // 2. CRITICAL FIX: Only the Server is allowed to detect traps and teleport bodies
         if (!IsServer) return;
         HandleTouch(collision.gameObject);
     }
 
-    // Central logic for both Triggers and Collisions
     private void HandleTouch(GameObject touchedObject)
     {
-        // 1. Did we touch a Checkpoint?
         if (touchedObject.CompareTag("Checkpoint"))
         {
-            // Save the player's exact current safe position
             currentRespawnPosition = transform.position;
         }
-
-        // 2. Did we touch a hazard or fall off the map?
         else if (touchedObject.CompareTag("KillZone"))
         {
-            // Teleport the player back to their last saved checkpoint
-            transform.position = currentRespawnPosition;
-
-            // Instantly stop their falling momentum so they don't glitch through the floor upon respawning
+            // Stop momentum so they don't slide off the checkpoint after respawning
             if (rb != null)
             {
                 rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
             }
+
+            // The Server teleports the player safely
+            transform.position = currentRespawnPosition;
         }
     }
 }

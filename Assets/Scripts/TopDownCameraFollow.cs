@@ -2,26 +2,37 @@ using UnityEngine;
 
 public class TopDownCameraFollow : MonoBehaviour
 {
-    public Vector3 offset = new Vector3(0, 5, -8);
-    public float followSpeed = 10f;
+    public Transform target;
+    public float distance = 7.0f;
+    public float mouseSensitivity = 3.0f;
+    public float heightOffset = 1.0f;
 
-    private Transform target;
+    private float pitch = 15f;
+    private float yaw = 0f;
 
     public void SetTarget(Transform newTarget)
     {
         target = newTarget;
+        // REMOVED: Cursor locking logic has been moved to RaceManager
     }
 
-    private void LateUpdate()
+    void LateUpdate()
     {
         if (target == null) return;
 
-        // Calculate the camera pos
-        Vector3 desiredPosition = target.position + offset;
+        // Only rotate camera if the game is actively being played (time isn't frozen)
+        if (Time.timeScale > 0f)
+        {
+            yaw += Input.GetAxis("Mouse X") * mouseSensitivity;
+            pitch -= Input.GetAxis("Mouse Y") * mouseSensitivity;
+            pitch = Mathf.Clamp(pitch, -15f, 60f);
+        }
 
-        transform.position = Vector3.Lerp(transform.position, desiredPosition, followSpeed * Time.deltaTime);
+        Quaternion rotation = Quaternion.Euler(pitch, yaw, 0);
+        Vector3 lookPosition = target.position + (Vector3.up * heightOffset);
+        Vector3 cameraPosition = lookPosition + rotation * new Vector3(0, 0, -distance);
 
-        // THE FIX: Ensure camera always faces directly at the player (the target), not itself
-        transform.LookAt(target.position);
+        transform.position = cameraPosition;
+        transform.LookAt(lookPosition);
     }
 }

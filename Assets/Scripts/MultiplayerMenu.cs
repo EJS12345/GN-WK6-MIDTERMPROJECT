@@ -43,7 +43,9 @@ public class MultiplayerMenu : MonoBehaviour
             transport.SetRelayServerData(AllocationUtils.ToRelayServerData(allocation, WebGLConnectionType));
 
             NetworkManager.Singleton.StartHost();
-            statusText.text = "Host started successfully!";
+
+            // UPDATED: Text now reflects the 30-second wait
+            statusText.text = "Host started! Waiting up to 30s for Player 2...";
         }
         catch (RelayServiceException e)
         {
@@ -60,7 +62,6 @@ public class MultiplayerMenu : MonoBehaviour
             return;
         }
 
-        // CRITICAL FIX: Removes invisible characters, spaces, and newlines that crash Relay
         string cleanJoinCode = joinCodeInput.text.Trim().Replace("\u200B", "").Replace("\n", "").Replace("\r", "");
 
         try
@@ -73,8 +74,7 @@ public class MultiplayerMenu : MonoBehaviour
             transport.SetRelayServerData(AllocationUtils.ToRelayServerData(joinAllocation, WebGLConnectionType));
 
             NetworkManager.Singleton.StartClient();
-
-            if (menuUI != null) menuUI.SetActive(false);
+            statusText.text = "Connected! Race starting...";
         }
         catch (System.Exception e)
         {

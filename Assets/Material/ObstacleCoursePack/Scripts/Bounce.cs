@@ -1,33 +1,21 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class Bounce : MonoBehaviour
 {
-	public float force = 10f; //Force 10000f
-	public float stunTime = 0.5f;
-	private Vector3 hitDir;
+    public float Force = 5f;
+    public float StunTime = 0.3f;
 
-	void OnCollisionEnter(Collision collision)
-	{
-		foreach (ContactPoint contact in collision.contacts)
-		{
-			Debug.DrawRay(contact.point, contact.normal, Color.white);
-			if (collision.gameObject.tag == "Player")
-			{
-				hitDir = contact.normal;
-				collision.gameObject.GetComponent<CharacterControls>().HitPlayer(-hitDir * force, stunTime);
-				return;
-			}
-		}
-		/*if (collision.relativeVelocity.magnitude > 2)
-		{
-			if (collision.gameObject.tag == "Player")
-			{
-				//Debug.Log("Hit");
-				collision.gameObject.GetComponent<CharacterControls>().HitPlayer(-hitDir*force, stunTime);
-			}
-			//audioSource.Play();
-		}*/
-	}
+    private void OnCollisionEnter(Collision collision)
+    {
+        // 1. Find the Rigidbody of whatever touched the bounce pad
+        Rigidbody rb = collision.gameObject.GetComponent<Rigidbody>();
+
+        // 2. CRITICAL SAFETY CHECK: Only try to bounce objects that actually have a Rigidbody
+        if (rb != null)
+        {
+            // Push the player straight up, multiplied by your Force variable
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z); // Reset fall speed
+            rb.AddForce(Vector3.up * Force, ForceMode.Impulse);
+        }
+    }
 }

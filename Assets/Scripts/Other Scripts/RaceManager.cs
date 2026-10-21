@@ -1,7 +1,9 @@
 using Unity.Netcode;
 using UnityEngine;
 using TMPro;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 
 public class RaceManager : NetworkBehaviour
 {
@@ -18,48 +20,60 @@ public class RaceManager : NetworkBehaviour
     [SerializeField] private TMP_Text endGameLeaderboardText;
 
     [Header("Race Settings")]
-    [SerializeField] private float totalRaceTime = 120f; // 2 minutes countdown
+    [SerializeField] private float totalRaceTime = 120f;
 
-    // Synchronized Netcode Variables
     private NetworkVariable<float> networkTime = new NetworkVariable<float>(120f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private NetworkVariable<bool> isRaceActive = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     private List<string> finishedPlayers = new List<string>();
+    private bool isWaitingForPlayers = false;
+
+    // UPDATED: Now set to 30 seconds
+    private float waitTimer = 30f;
 
     private void Awake()
     {
         if (Instance == null) Instance = this;
     }
 
+    private void Start()
+    {
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
+        if (inGameHUD != null) inGameHUD.SetActive(false);
+        if (endGamePanel != null) endGamePanel.SetActive(false);
+        Time.timeScale = 1f;
+
+        // Ensure the mouse is visible while on the main menu
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
     public override void OnNetworkSpawn()
     {
         if (IsServer)
         {
-            networkTime.Value = totalRaceTime;
-        }
-
-        if (endGamePanel != null) endGamePanel.SetActive(false);
-        if (inGameHUD != null) inGameHUD.SetActive(false);
-    }
-
-    // Called when Host/Client connects successfully
-    public void StartRace()
-    {
-        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
-        if (inGameHUD != null) inGameHUD.SetActive(true);
-
-        if (IsServer)
-        {
-            isRaceActive.Value = true;
-            networkTime.Value = totalRaceTime;
+            isWaitingForPlayers = true;
+            // UPDATED: Now set to 30 seconds
+            waitTimer = 30f;
         }
     }
 
     private void Update()
     {
+        if (IsServer && isWaitingForPlayers)
+        {
+            waitTimer -= Time.deltaTime;
+            if (NetworkManager.Singleton.ConnectedClientsIds.Count >= 2 || waitTimer <= 0f)
+            {
+                isWaitingForPlayers = false;
+                isRaceActive.Value = true;
+                networkTime.Value = totalRaceTime;
+                StartRaceUIClientRpc();
+            }
+        }
+
         if (!isRaceActive.Value) return;
 
-        // Server handles the timer logic
         if (IsServer)
         {
             if (networkTime.Value > 0)
@@ -73,8 +87,18 @@ public class RaceManager : NetworkBehaviour
             }
         }
 
-        // Update local UI timer display on all clients
         UpdateTimerDisplay(networkTime.Value);
+    }
+
+    [ClientRpc]
+    private void StartRaceUIClientRpc()
+    {
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+        if (inGameHUD != null) inGameHUD.SetActive(true);
+
+        // CRITICAL FIX: Lock the mouse to the center of the screen ONLY when the race actually starts
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     private void UpdateTimerDisplay(float timeInSeconds)
@@ -87,17 +111,16 @@ public class RaceManager : NetworkBehaviour
         }
     }
 
-    // Call this when a player steps on the Finish Line trigger box
-    public void PlayerCrossedFinishLine(ulong clientId)
+    [ServerRpc(RequireOwnership = false)]
+    public void PlayerCrossedFinishLineServerRpc(ulong clientId)
     {
-        if (!IsServer || !isRaceActive.Value) return;
+        if (!isRaceActive.Value) return;
 
         string playerName = "Player " + (clientId + 1);
         if (!finishedPlayers.Contains(playerName))
         {
             finishedPlayers.Add(playerName);
 
-            // FIX: Format the string on the Server, then send ONE string to clients
             string display = "LEADERBOARD\n";
             for (int i = 0; i < finishedPlayers.Count; i++)
             {
@@ -106,8 +129,7 @@ public class RaceManager : NetworkBehaviour
 
             UpdateHUDLeaderboardClientRpc(display);
 
-            // End race when all testing players (e.g., 2 players) cross the finish line
-            if (finishedPlayers.Count >= 2)
+            if (finishedPlayers.Count >= NetworkManager.Singleton.ConnectedClientsIds.Count)
             {
                 EndRace();
             }
@@ -120,7 +142,6 @@ public class RaceManager : NetworkBehaviour
 
         isRaceActive.Value = false;
 
-        // FIX: Format the string on the Server, then send ONE string to clients
         string display = "END OF CLOCK AND RACE\nLeaderboard\n";
         if (finishedPlayers.Count == 0)
         {
@@ -137,18 +158,37 @@ public class RaceManager : NetworkBehaviour
         ShowEndGameOverlayClientRpc(display);
     }
 
-    // FIX: Accepting a single standard string instead of a string array
     [ClientRpc]
     private void UpdateHUDLeaderboardClientRpc(string formattedLeaderboard)
     {
         if (hudLeaderboardText != null) hudLeaderboardText.text = formattedLeaderboard;
     }
 
-    // FIX: Accepting a single standard string instead of a string array
     [ClientRpc]
     private void ShowEndGameOverlayClientRpc(string formattedEndScreen)
     {
+        if (inGameHUD != null) inGameHUD.SetActive(false);
         if (endGamePanel != null) endGamePanel.SetActive(true);
         if (endGameLeaderboardText != null) endGameLeaderboardText.text = formattedEndScreen;
+
+        Time.timeScale = 0f;
+
+        StartCoroutine(ReturnToMenuSequence());
+    }
+
+    private IEnumerator ReturnToMenuSequence()
+    {
+        yield return new WaitForSecondsRealtime(15f);
+
+        Time.timeScale = 1f;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.Shutdown();
+        }
+
+        SceneManager.LoadScene("TitleScreenManager");
     }
 }
