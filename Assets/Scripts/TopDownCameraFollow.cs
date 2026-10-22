@@ -13,14 +13,14 @@ public class TopDownCameraFollow : MonoBehaviour
     public void SetTarget(Transform newTarget)
     {
         target = newTarget;
-        // REMOVED: Cursor locking logic has been moved to RaceManager
+
     }
 
     void LateUpdate()
     {
         if (target == null) return;
 
-        // Only rotate camera if the game is actively being played (time isn't frozen)
+        // rotate camera if the game is actively being played (time isn't frozen)
         if (Time.timeScale > 0f)
         {
             yaw += Input.GetAxis("Mouse X") * mouseSensitivity;

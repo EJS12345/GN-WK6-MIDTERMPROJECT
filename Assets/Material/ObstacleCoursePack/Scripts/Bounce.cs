@@ -7,10 +7,9 @@ public class Bounce : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        // 1. Find the Rigidbody of whatever touched the bounce pad
+        // Rigidbody of whatever touched the bounce pad
         Rigidbody rb = collision.gameObject.GetComponent<Rigidbody>();
 
-        // 2. CRITICAL SAFETY CHECK: Only try to bounce objects that actually have a Rigidbody
         if (rb != null)
         {
             // Push the player straight up, multiplied by your Force variable

@@ -10,7 +10,7 @@ public class PlayerRespawn : NetworkBehaviour
     {
         rb = GetComponent<Rigidbody>();
 
-        // 1. CRITICAL FIX: The Server must track the positions, not the Owner.
+        // The Server must track the positions, not the Owner.
         if (IsServer)
         {
             currentRespawnPosition = transform.position;
@@ -19,14 +19,14 @@ public class PlayerRespawn : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        // 2. CRITICAL FIX: Only the Server is allowed to detect traps and teleport bodies
+        // Only the Server is allowed to detect traps and teleport bodies
         if (!IsServer) return;
         HandleTouch(other.gameObject);
     }
 
     private void OnCollisionEnter(Collision collision)
     {
-        // 2. CRITICAL FIX: Only the Server is allowed to detect traps and teleport bodies
+        // Only the Server is allowed to detect traps and teleport bodies
         if (!IsServer) return;
         HandleTouch(collision.gameObject);
     }

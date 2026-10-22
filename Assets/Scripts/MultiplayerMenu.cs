@@ -44,7 +44,6 @@ public class MultiplayerMenu : MonoBehaviour
 
             NetworkManager.Singleton.StartHost();
 
-            // UPDATED: Text now reflects the 30-second wait
             statusText.text = "Host started! Waiting up to 30s for Player 2...";
         }
         catch (RelayServiceException e)

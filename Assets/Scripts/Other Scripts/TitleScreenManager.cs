@@ -23,7 +23,7 @@ public class MenuManager : MonoBehaviour
 
     void OnStartButtonClicked()
     {
-        // Load the "SampleScene" when the button is clicked
+        // Load "SampleScene" when the button is clicked
         SceneManager.LoadScene("SampleScene");
     }
 }

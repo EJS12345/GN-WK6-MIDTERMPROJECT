@@ -28,7 +28,6 @@ public class RaceManager : NetworkBehaviour
     private List<string> finishedPlayers = new List<string>();
     private bool isWaitingForPlayers = false;
 
-    // UPDATED: Now set to 30 seconds
     private float waitTimer = 30f;
 
     private void Awake()
@@ -43,7 +42,7 @@ public class RaceManager : NetworkBehaviour
         if (endGamePanel != null) endGamePanel.SetActive(false);
         Time.timeScale = 1f;
 
-        // Ensure the mouse is visible while on the main menu
+        // the mouse is visible while on the main menu
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
@@ -53,7 +52,7 @@ public class RaceManager : NetworkBehaviour
         if (IsServer)
         {
             isWaitingForPlayers = true;
-            // UPDATED: Now set to 30 seconds
+           
             waitTimer = 30f;
         }
     }
@@ -96,7 +95,7 @@ public class RaceManager : NetworkBehaviour
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
         if (inGameHUD != null) inGameHUD.SetActive(true);
 
-        // CRITICAL FIX: Lock the mouse to the center of the screen ONLY when the race actually starts
+        // Lock the mouse to the center of the screen when the race actually starts
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }

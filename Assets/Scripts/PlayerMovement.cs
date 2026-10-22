@@ -5,7 +5,7 @@ public class PlayerMovement : NetworkBehaviour
 {
     [Header("Movement Settings")]
     public float moveSpeed = 5f;
-    public float rotationSpeed = 12f; // How fast the character model spins to face forward
+    public float rotationSpeed = 12f; 
 
     [Header("Jump Settings")]
     public float jumpForce = 7f;
@@ -32,11 +32,11 @@ public class PlayerMovement : NetworkBehaviour
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
 
-        // 1. CRITICAL FIX: Make movement relative to where the camera is looking
+        // Make movement relative to where the camera is looking
         Vector3 camForward = Camera.main.transform.forward;
         Vector3 camRight = Camera.main.transform.right;
 
-        camForward.y = 0f; // Keep movement completely flat on the ground
+        camForward.y = 0f;
         camRight.y = 0f;
         camForward.Normalize();
         camRight.Normalize();
@@ -69,7 +69,7 @@ public class PlayerMovement : NetworkBehaviour
 
         rb.linearVelocity = new Vector3(targetVelocity.x, rb.linearVelocity.y, targetVelocity.z);
 
-        // 2. CRITICAL FIX: Smoothly rotate the 3D character to face the direction they are walking
+        // Smoothly rotate the 3D character to face the direction they are walking
         if (moveDirection.sqrMagnitude > 0.01f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
