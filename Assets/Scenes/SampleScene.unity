@@ -29057,7 +29057,7 @@ MonoBehaviour:
   timerText: {fileID: 203786726}
   hudLeaderboardText: {fileID: 541689739}
   endGameLeaderboardText: {fileID: 1474210891}
-  totalRaceTime: 300
+  totalRaceTime: 480
 --- !u!1001 &1893524361
 PrefabInstance:
   m_ObjectHideFlags: 0
